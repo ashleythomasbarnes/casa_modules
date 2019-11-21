@@ -1,3 +1,5 @@
+from tasks import imstat
+
 def computerms(imagename, lower=0, upper=-1):
     """
     Computes the rms over a given range of channels

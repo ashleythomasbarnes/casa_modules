@@ -1,7 +1,7 @@
 ### Note that as for Nov. 2019 this code is completely untested and may not function with the newest version of casa
 ### Use at own risk!
 
-def run_makedirtycube(vis, imagename, imsize, cell,
+def run_makedirtycube(vis, imagename, imsize, pixelsize,
                       phasecenter='', restfreq='',
                       nchan=-1, width='', start=0,
                       datacolumn='data', parallel=False,
@@ -17,13 +17,13 @@ def run_makedirtycube(vis, imagename, imsize, cell,
 
     #Makes dirty image
     dirtyimage = '%s_dirty' %imagename
-    print '[INFO] Making dirty image: %s' %outimage
+    print '[INFO] Making dirty image: %s' %dirtyimage
 
     tclean(vis            = vis,
            datacolumn     = 'data',
            imagename      = dirtyimage,
            imsize         = imsize,
-           cell           = cell,
+           cell           = str(pixelsize)+'arcsec',
            phasecenter    = phasecenter,
            specmode       = 'cube',
            nchan          = nchan,
@@ -39,13 +39,13 @@ def run_makedirtycube(vis, imagename, imsize, cell,
            parallel       = parallel)
 
     #Cleaning up the dir
-    print '[INFO] Cleaning output dir.'
-    os.system('rm -rf %s.weight' %dirtyimage)
-    os.system('rm -rf %s.model' %dirtyimage)
-    os.system('rm -rf %s.psf' %dirtyimage)
-    os.system('rm -rf %s.sumwt' %dirtyimage)
+    #print '[INFO] Cleaning output dir.'
+    #os.system('rm -rf %s.weight' %dirtyimage)
+    #os.system('rm -rf %s.model' %dirtyimage)
+    #os.system('rm -rf %s.psf' %dirtyimage)
+    #os.system('rm -rf %s.sumwt' %dirtyimage)
 
-def run_makecleancube(vis, imagename, imsize, cell,
+def run_makecleancube(vis, imagename, imsize, pixelsize,
                       phasecenter='', restfreq='',
                       nchan=-1, width='', start=0,
                       datacolumn='data', parallel=False,
@@ -82,36 +82,43 @@ def run_makecleancube(vis, imagename, imsize, cell,
     #Makes mask and cleans
     for cycle in range(n_cycles):
 
+        print ''
         previmage = '%s_cycle%i' %(imagename, cycle-1)
         outimage = '%s_cycle%i' %(imagename, cycle)
         print '[INFO] Cleaning cycle %i' %cycle
         print '[INFO] Making image: %s' %outimage
+        print ''
 
-        header = imhead(imagename=dirtyimage)
-        major = header['restoringbeam']['major']['value']
-        minor = header['restoringbeam']['minor']['value']
+        header = imhead(imagename=dirtyimage + '.image', mode='list')
+        major = header['perplanebeams']['median area beam']['major']['value']
+        minor = header['perplanebeams']['median area beam']['minor']['value']
         beam_area = major*minor
-        pixel_area = cell**2
+        pixel_area = pixelsize**2
         beam_pixel_ratio = beam_area/pixel_area
 
         thresh = threshs[cycle]
+
+        print ''
         print '[INFO] Cycle thresh: %0.2f rms' %thresh
+        print ''
 
         if cycle == 0:
 
-            dirtyimage = '%s.image' %dirtyimage
-            stats = imstat(imagename = dirtyimage_)
-            mad = stat['medabsdevmed']
+            dirtyimage_ = '%s.image' %dirtyimage
+            stats = imstat(imagename = dirtyimage_ )
+            mad = stats['medabsdevmed'][0]
+            print ''
             print '[INFO] Cycle rms: %g Jy/beam' %mad
+            print ''
 
             mask = masking.make_mask_3d(imagename = dirtyimage,
-                                        thresh = thresh,
+                                        thresh = thresh*mad,
                                         fl = False,
                                         useimage = True,
                                         pixelmin = beam_pixel_ratio*3,
                                         major = major,
                                         minor = minor,
-                                        pixelsize = cell,
+                                        pixelsize = pixelsize,
                                         line = True,
                                         overwrite_old = False)
 
@@ -119,31 +126,35 @@ def run_makecleancube(vis, imagename, imsize, cell,
             print '[INFO] No model - okay?'
 
         else:
-
+            print ''
             previmage_ = '%s.image' %previmage
             stats = imstat(imagename=previmage_)
-            mad = stat['medabsdevmed']
+            mad = stats['medabsdevmed'][0]
+            print ''
             print '[INFO] Cycle rms: %g Jy/beam' %mad
+            print ''
 
             mask = masking.make_mask_3d(imagename = previmage,
-                                        thresh = thresh,
+                                        thresh = thresh*mad,
                                         fl = True,
                                         useimage = False,
                                         pixelmin = beam_pixel_ratio*3,
                                         major = major,
                                         minor = minor,
-                                        pixelsize = cell,
+                                        pixelsize = pixelsize,
                                         line = True,
                                         overwrite_old = False)
 
             startmodel = '%s.model' %previmage
+            print ''
             print '[INFO] Using model: %s' %startmodel
-
+            print ''
+            
         tclean(vis            = vis,
                datacolumn     = 'data',
                imagename      = outimage,
                imsize         = imsize,
-               cell           = cell,
+               cell           = str(pixelsize)+'arcsec',
                phasecenter    = phasecenter,
                specmode       = 'cube',
                nchan          = nchan,
@@ -161,12 +172,12 @@ def run_makecleancube(vis, imagename, imsize, cell,
                startmodel     = startmodel,
                parallel       = parallel)
 
-        os.system('rm -rf %s.weight' %outimage)
-        os.system('rm -rf %s.model' %outimage)
-        os.system('rm -rf %s.psf' %outimage)
-        os.system('rm -rf %s.sumwt' %outimage)
-        os.system('rm -rf %s.threshmask' %previmage)
-        os.system('rm -rf %s.fullmask' %previmage)
-        os.system('rm -rf %s.fullmask.nopb' %previmage)
+    os.system('rm -rf %s.weight' %outimage)
+    os.system('rm -rf %s.model' %outimage)
+    os.system('rm -rf %s.psf' %outimage)
+    os.system('rm -rf %s.sumwt' %outimage)
+    os.system('rm -rf %s.threshmask' %previmage)
+    os.system('rm -rf %s.fullmask' %previmage)
+    os.system('rm -rf %s.fullmask.nopb' %previmage)
 
-        return
+    return

@@ -2,12 +2,27 @@
 ### Use at own risk!
 
 def run_makedirtycube(vis, imagename, imsize, pixelsize,
-                      phasecenter='', restfreq='',
+                      phasecenter='', restfreq='', specmode = 'cube',
                       nchan=-1, width='', start=0,
-                      datacolumn='data', parallel=False,
-                      scales=[0,7,21,63]):
+                      datacolumn='data', outframe='LSRK', gridder='mosaic',
+                      deconvolver='multiscale', scales=[0,7,21,63],
+                      niter=1000000, parallel=False):
 
     """
+    Creates a dirty cube
+
+    Parameters
+    ----------
+    vis : casa ms visibility file
+        input visibilities
+    imagename : string w/o extension
+        output file name for the dirty cube. Will be appended with _dirty
+    imsize : array
+        array or x,y list for the size of the output image
+    pixelsize : number
+        size of the pixels. Hard coded for arcseconds
+
+    remaining parameters are those sent to tclean
 
     """
     import os
@@ -20,19 +35,19 @@ def run_makedirtycube(vis, imagename, imsize, pixelsize,
     print '[INFO] Making dirty image: %s' %dirtyimage
 
     tclean(vis            = vis,
-           datacolumn     = 'data',
+           datacolumn     = datacolumn,
            imagename      = dirtyimage,
            imsize         = imsize,
            cell           = str(pixelsize)+'arcsec',
            phasecenter    = phasecenter,
-           specmode       = 'cube',
+           specmode       = specmode,
            nchan          = nchan,
            start          = start,
            width          = width,
-           outframe       = 'LSRK',
+           outframe       = outframe,
            restfreq       = restfreq,
-           gridder        = 'mosaic',
-           deconvolver    = 'multiscale',
+           gridder        = gridder,
+           deconvolver    = deconvolver,
            scales         = scales,
            niter          = 0,
            interactive    = False,
@@ -46,36 +61,60 @@ def run_makedirtycube(vis, imagename, imsize, pixelsize,
     #os.system('rm -rf %s.sumwt' %dirtyimage)
 
 def run_makecleancube(vis, imagename, imsize, pixelsize,
-                      phasecenter='', restfreq='',
+                      phasecenter='', restfreq='', specmode = 'cube',
                       nchan=-1, width='', start=0,
-                      datacolumn='data', parallel=False,
-                      n_cycles=5, scales=[0,7,21,63]):
+                      datacolumn='data', outframe='LSRK', gridder='mosaic',
+                      deconvolver='multiscale', scales=[0,7,21,63],
+                      niter=1000000, tp_model = '',usetpmodel=False,
+                      n_cycles=5, nsigma_max = 10, nsigma_min=1,
+                      parallel=False):
 
-    ''' Code to conduct basic *cube* cleaning of ALMA data in CASA
-        Input:
-            [Required]
-            vis = Input .ms file
-            imagename = Output full path imagename, without extension (e.g. without .image)
-            imsize = Size of image in pixels
-            cell = Size of cell in arcsec
-            [optional]
-            phasecenter = Phasecenter for imaging; default is nothing, but not sure if will run without
-            restfreq = frequency of line to be imaged, default is nothing, but not sure if will run without
-            nchan = number of channels to be imaged: default is all,
-            width = width of channels to be imaged: default is 1 channel,
-            start = start of channels to be imaged: default is channle 0,
-            datacolumn = column in .ms to be imaged; default is 'data' column,
-            parallel = conduct clean in parallel; default is False,
-        Return
-            None
-                    '''
+    """
+    Code for staggered non-interactive CLEANing in casa.
+
+    This code employs an automasking technique to identify data above a given
+    threshold. CLEANing commences and stops when this threshold is hit. In
+    the next iteration the previous CLEAN is used as a model for the next cycle.
+
+    The number of steps in the CLEANing process can be finetuned to avoid
+    divergence.
+
+    Note that this code requires a dirty cube to be located in the same
+    directory as "imagename". This can be produced using run_makedirtycube.
+
+    Parameters
+    ----------
+    vis : casa ms visibility file
+        input visibilities
+    imagename : string w/o extension
+        output file name for the dirty cube. Will be appended with _dirty
+    imsize : array
+        array or x,y list for the size of the output image
+    pixelsize : number
+        size of the pixels. Hard coded for arcseconds
+    tp_model : CASA image
+        single dish model to use for the CLEANing. Must already be tweaked into
+        a useable format
+    usetpmodel : bool
+        Do you want to use this as a model for the CLEANing? default=no
+    n_cycles : number
+        number of cycles for the CLEANing
+    nsigma_max : number
+        starting threshold for mask creation. Given as an integer multiple of
+        the rms
+    nsigma_min : number
+        end threshold for mask creation. i.e. CLEAN down to nsigma_min * rms
+
+    remaining parameters are those sent to tclean
+
+    """
     import os
     import masking
     import numpy as np
     from tasks import tclean, imhead, imstat
 
     # define thresholds, from 10 to 1
-    threshs = np.linspace(10, 1, 5)
+    threshs = np.linspace(nsigma_max, nsigma_min, n_cycles)
 
     dirtyimage = '%s_dirty' %imagename
 
@@ -149,23 +188,23 @@ def run_makecleancube(vis, imagename, imsize, pixelsize,
             print ''
             print '[INFO] Using model: %s' %startmodel
             print ''
-            
+
         tclean(vis            = vis,
-               datacolumn     = 'data',
+               datacolumn     = datacolumn,
                imagename      = outimage,
                imsize         = imsize,
                cell           = str(pixelsize)+'arcsec',
                phasecenter    = phasecenter,
-               specmode       = 'cube',
+               specmode       = specmode,
                nchan          = nchan,
                start          = start,
                width          = width,
-               outframe       = 'LSRK',
+               outframe       = outframe,
                restfreq       = restfreq,
-               gridder        = 'mosaic',
-               deconvolver    = 'multiscale',
+               gridder        = gridder,
+               deconvolver    = deconvolver,
                scales         = scales,
-               niter          = 1000000,
+               niter          = niter,
                threshold      = thresh*mad,
                interactive    = False,
                mask           = mask,

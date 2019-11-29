@@ -6,7 +6,7 @@ def run_makedirtycube(vis, imagename, imsize, pixelsize,
                       nchan=-1, width='', start=0,
                       datacolumn='data', outframe='LSRK', gridder='mosaic',
                       deconvolver='multiscale', scales=[0,7,21,63],
-                      niter=1000000, parallel=False):
+                      parallel=False):
 
     """
     Creates a dirty cube
@@ -211,12 +211,12 @@ def run_makecleancube(vis, imagename, imsize, pixelsize,
                startmodel     = startmodel,
                parallel       = parallel)
 
-    os.system('rm -rf %s.weight' %outimage)
-    os.system('rm -rf %s.model' %outimage)
-    os.system('rm -rf %s.psf' %outimage)
-    os.system('rm -rf %s.sumwt' %outimage)
-    os.system('rm -rf %s.threshmask' %previmage)
-    os.system('rm -rf %s.fullmask' %previmage)
-    os.system('rm -rf %s.fullmask.nopb' %previmage)
+    #os.system('rm -rf %s.weight' %outimage)
+    #os.system('rm -rf %s.model' %outimage)
+    #os.system('rm -rf %s.psf' %outimage)
+    #os.system('rm -rf %s.sumwt' %outimage)
+    #os.system('rm -rf %s.threshmask' %previmage)
+    #os.system('rm -rf %s.fullmask' %previmage)
+    #os.system('rm -rf %s.fullmask.nopb' %previmage)
 
     return

@@ -1,4 +1,4 @@
-execfile("/data/beegfs/astro-storage/groups/henning/henshaw/Code/distribute/tp2vis.py")
+execfile("/Users/henshaw/Dropbox/Work/Code/GitHub/distribute/tp2vis.py")
 
 def maketpvisibilities(tpimage,pointings,outputfile='tpvis.ms',lower=0,upper=-1):
     """

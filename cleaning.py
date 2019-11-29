@@ -1,6 +1,3 @@
-### Note that as for Nov. 2019 this code is completely untested and may not function with the newest version of casa
-### Use at own risk!
-
 def run_makedirtycube(vis, imagename, imsize, pixelsize,
                       phasecenter='', restfreq='', specmode = 'cube',
                       nchan=-1, width='', start=0,
@@ -65,7 +62,7 @@ def run_makecleancube(vis, imagename, imsize, pixelsize,
                       nchan=-1, width='', start=0,
                       datacolumn='data', outframe='LSRK', gridder='mosaic',
                       deconvolver='multiscale', scales=[0,7,21,63],
-                      niter=1000000, tp_model = '',usetpmodel=False,
+                      niter=100000, tp_model = '',usetpmodel=False,
                       n_cycles=5, nsigma_max = 10, nsigma_min=1,
                       parallel=False):
 
@@ -96,7 +93,8 @@ def run_makecleancube(vis, imagename, imsize, pixelsize,
         single dish model to use for the CLEANing. Must already be tweaked into
         a useable format
     usetpmodel : bool
-        Do you want to use this as a model for the CLEANing? default=no
+        Do you want to use this as a model for the CLEANing? default=no - Will
+        use the previous CLEAN image as an input model
     n_cycles : number
         number of cycles for the CLEANing
     nsigma_max : number
@@ -122,8 +120,13 @@ def run_makecleancube(vis, imagename, imsize, pixelsize,
     for cycle in range(n_cycles):
 
         print ''
-        previmage = '%s_cycle%i' %(imagename, cycle-1)
-        outimage = '%s_cycle%i' %(imagename, cycle)
+        if usetpmodel:
+            previmage = '%s_cycle%i_cycle' %(imagename, cycle-1)
+            outimage = '%s_cycle%i_cycle' %(imagename, cycle)
+        else:
+            previmage = '%s_cycle%i' %(imagename, cycle-1)
+            outimage = '%s_cycle%i' %(imagename, cycle)
+
         print '[INFO] Cleaning cycle %i' %cycle
         print '[INFO] Making image: %s' %outimage
         print ''
@@ -161,7 +164,11 @@ def run_makecleancube(vis, imagename, imsize, pixelsize,
                                         line = True,
                                         overwrite_old = False)
 
-            startmodel =  ''
+            if usetpmodel:
+                startmodel = [tp_model]
+            else:
+                startmodel =  ''
+
             print '[INFO] No model - okay?'
 
         else:
@@ -184,7 +191,10 @@ def run_makecleancube(vis, imagename, imsize, pixelsize,
                                         line = True,
                                         overwrite_old = False)
 
-            startmodel = '%s.model' %previmage
+            if usetpmodel:
+                startmodel = [tp_model]
+            else:
+                startmodel = ['%s.model' %previmage]
             print ''
             print '[INFO] Using model: %s' %startmodel
             print ''

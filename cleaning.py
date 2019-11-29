@@ -121,8 +121,8 @@ def run_makecleancube(vis, imagename, imsize, pixelsize,
 
         print ''
         if usetpmodel:
-            previmage = '%s_cycle%i_cycle' %(imagename, cycle-1)
-            outimage = '%s_cycle%i_cycle' %(imagename, cycle)
+            previmage = '%s_cycle%i_tpmodel' %(imagename, cycle-1)
+            outimage = '%s_cycle%i_tpmodel' %(imagename, cycle)
         else:
             previmage = '%s_cycle%i' %(imagename, cycle-1)
             outimage = '%s_cycle%i' %(imagename, cycle)
